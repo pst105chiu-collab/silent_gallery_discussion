@@ -1,514 +1,2122 @@
-<!-- ... existing code ... -->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>無聲筆談 Silent Gallery Walk 萬用討論板</title>
+    <!-- 載入標準 Firebase Compat UMD 腳本 (支援本地預覽與 GitHub Pages，無需 ES Module) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <style>
-        body {
-            background-color: #0F172A;
-            color: #1E293B;
-            overflow-x: hidden;
+        :root {
+            --bg-dark: #0f172a;
+            --bg-header: #1e293b;
+            --bg-parchment: #faf8f5;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent-amber: #d97706;
+            --accent-amber-light: #fef3c7;
+            --accent-indigo: #4f46e5;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.06);
+            --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.1);
+            --radius-md: 12px;
+            --radius-lg: 18px;
         }
-        /* 羊皮紙微質感 */
-        .parchment-bg {
-            background-color: #FAF8F5;
-            background-image: radial-gradient(#E2E8F0 0.75px, transparent 0.75px);
-            background-size: 20px 20px;
-        }
-        /* 書封立體書脊質感 */
-        .book-cover-3d {
-            box-shadow: -3px 4px 10px rgba(0, 0, 0, 0.45), inset 3px 0 4px rgba(255, 255, 255, 0.25), inset -1px 0 2px rgba(0, 0, 0, 0.4);
-        }
-        /* 自訂滑桿樣式 */
-<!-- ... existing code ... -->
-        <!-- 主標題與操作列 -->
-        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-3.5">
-                <!-- 直立式精緻書封縮圖 / 預設書本佔位框 -->
-                <div class="relative w-12 h-16 sm:w-14 sm:h-20 rounded-md overflow-hidden bg-gradient-to-br from-slate-700 to-slate-800 border border-amber-500/40 book-cover-3d shrink-0 flex items-center justify-center group">
-                    <img id="bookCoverImg" src="" alt="文本封面" class="w-full h-full object-cover hidden" onerror="handleCoverImgError()">
-                    <div id="bookCoverPlaceholder" class="flex flex-col items-center justify-center text-amber-400/90 p-1 text-center">
-                        <i data-lucide="book-open" class="w-6 h-6"></i>
-                        <span class="text-[9px] tracking-tighter text-slate-300 mt-0.5 leading-none">閱讀文本</span>
-                    </div>
-                    <!-- 書脊反光線 -->
-                    <div class="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-r from-white/25 to-transparent pointer-events-none"></div>
-                </div>
 
-                <div>
-                    <p id="courseSubtitleDisplay" class="text-[11px] uppercase tracking-widest text-amber-300/90 font-semibold">Silent Gallery Walk 思辨討論板</p>
-                    <h1 id="courseTitleDisplay" class="font-serif text-lg sm:text-xl font-bold text-amber-50 tracking-wide mt-0.5">
-                        《鏡之孤城》六年級無聲筆談
-                    </h1>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-parchment);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 頂部深藍書卷風標頭 */
+        header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            padding: 16px 20px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+
+        .header-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .brand-area {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        /* 3D 立體書脊封面框 */
+        .book-cover-box {
+            width: 52px;
+            height: 70px;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #334155, #1e293b);
+            border: 1px solid rgba(251, 191, 36, 0.45);
+            box-shadow: -3px 4px 10px rgba(0, 0, 0, 0.45), inset 3px 0 4px rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .book-cover-box::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 5px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.28), transparent);
+            pointer-events: none;
+        }
+
+        .book-cover-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .book-placeholder {
+            text-align: center;
+            color: #fbbf24;
+            font-size: 10px;
+            line-height: 1.2;
+            padding: 4px;
+        }
+
+        .title-group .subtitle {
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            color: #fbbf24;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .title-group h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-top: 2px;
+        }
+
+        .header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-pill {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #f59e0b;
+        }
+
+        .status-dot.online {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-user {
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .btn-user:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .btn-admin {
+            background: #f59e0b;
+            color: #0f172a;
+        }
+
+        .btn-admin:hover {
+            background: #fbbf24;
+        }
+
+        .btn-admin.authenticated {
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        .btn-primary {
+            background: var(--accent-indigo);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: #e11d48;
+            color: #ffffff;
+        }
+
+        .btn-danger:hover {
+            background: #be123c;
+        }
+
+        /* 凍結警報橫幅 */
+        .frozen-banner {
+            background: #be123c;
+            color: #ffffff;
+            text-align: center;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            display: none;
+        }
+
+        /* 主容器 */
+        main {
+            max-width: 1120px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px 16px 60px;
+            flex: 1;
+        }
+
+        /* 海報分頁切換列 */
+        .poster-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .poster-tab {
+            padding: 10px 18px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 2px solid var(--border-color);
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .poster-tab:hover {
+            border-color: #94a3b8;
+            color: var(--text-main);
+        }
+
+        .poster-tab.active {
+            background: #1e293b;
+            border-color: #1e293b;
+            color: #fbbf24;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* 核心思辨問題海報卡 */
+        .poster-board {
+            background: var(--bg-card);
+            border: 2px solid #cbd5e1;
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 22px;
+            position: relative;
+        }
+
+        .poster-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 999px;
+            margin-bottom: 8px;
+        }
+
+        .poster-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+
+        .question-list {
+            background: #f8fafc;
+            border-left: 4px solid var(--accent-indigo);
+            padding: 14px 18px;
+            border-radius: 0 12px 12px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .question-item {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* 發表新觀點區塊 */
+        .composer-box {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 22px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .composer-box textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 76px;
+            margin-bottom: 10px;
+        }
+
+        .composer-box textarea:focus {
+            outline: none;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+
+        .composer-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .symbol-guide {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* 筆尖交鋒篩選列 */
+        .stream-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stream-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .filter-btn {
+            padding: 5px 11px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background: #1e293b;
+            color: #ffffff;
+            border-color: #1e293b;
+        }
+
+        /* 論點卡片網格 */
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+            align-items: start;
+        }
+
+        .post-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .author-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .post-content {
+            font-size: 15px;
+            color: #0f172a;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* 巢狀符號回覆區 */
+        .replies-list {
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .reply-item {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 9px 11px;
+            font-size: 13.5px;
+            border-left: 3px solid #94a3b8;
+        }
+
+        .reply-item.tag-plus {
+            border-left-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .reply-item.tag-question {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .reply-item.tag-vs {
+            border-left-color: #e11d48;
+            background: #fff1f2;
+        }
+
+        .tag-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 5px;
+            margin-right: 5px;
+        }
+
+        .tag-plus .tag-badge { background: #10b981; color: #fff; }
+        .tag-question .tag-badge { background: #f59e0b; color: #fff; }
+        .tag-vs .tag-badge { background: #e11d48; color: #fff; }
+
+        .reply-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 內嵌回擊輸入框 */
+        .reply-drawer {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tag-selector {
+            display: flex;
+            gap: 6px;
+        }
+
+        .tag-option {
+            flex: 1;
+            padding: 6px 4px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 800;
+            border: 2px solid transparent;
+            cursor: pointer;
+            text-align: center;
+            background: #ffffff;
+        }
+
+        .tag-option[data-tag="+"] { color: #059669; border-color: #a7f3d0; }
+        .tag-option[data-tag="+"].selected { background: #059669; color: #ffffff; }
+
+        .tag-option[data-tag="?"] { color: #d97706; border-color: #fde68a; }
+        .tag-option[data-tag="?"].selected { background: #d97706; color: #ffffff; }
+
+        .tag-option[data-tag="VS"] { color: #e11d48; border-color: #fecdd3; }
+        .tag-option[data-tag="VS"].selected { background: #e11d48; color: #ffffff; }
+
+        /* 0~10 分立場尺規區 */
+        .ruler-section {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .ruler-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ruler-prompt {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 14px;
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .polarization-alert {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .ruler-labels {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 12.5px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .ruler-label-left {
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #bfdbfe;
+            max-width: 48%;
+        }
+
+        .ruler-label-right {
+            background: #fff1f2;
+            color: #be123c;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #fecdd3;
+            max-width: 48%;
+            text-align: right;
+        }
+
+        /* 11 刻度光譜圖 */
+        .spectrum-grid {
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            gap: 4px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 12px 6px 8px;
+            margin-bottom: 18px;
+            min-height: 110px;
+            align-items: end;
+        }
+
+        .spectrum-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dots-stack {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: 4px;
+            min-height: 68px;
+            width: 100%;
+        }
+
+        .vote-token {
+            padding: 2px 6px;
+            border-radius: 999px;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.18);
+            cursor: pointer;
+        }
+
+        .tick-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vote-form {
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-row input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-indigo);
+            cursor: pointer;
+        }
+
+        .score-display {
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--accent-indigo);
+            min-width: 54px;
+            text-align: center;
+        }
+
+        .reason-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .reason-row input {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+        }
+
+        /* 彈出視窗 (Modal) */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 50;
+            overflow-y: auto;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 460px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-card.wide {
+            max-width: 760px;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .color-choice {
+            padding: 8px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            background: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .color-choice.selected {
+            border-color: #0f172a;
+            background: #f1f5f9;
+        }
+
+        /* 教師後台分頁 */
+        .admin-tabs {
+            display: flex;
+            gap: 6px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin: 14px 0;
+            flex-wrap: wrap;
+        }
+
+        .admin-tab-btn {
+            padding: 7px 13px;
+            border-radius: 8px;
+            border: none;
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .admin-tab-btn.active {
+            background: #0f172a;
+            color: #fbbf24;
+        }
+
+        .editor-card {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        /* Toast 提示訊息 */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            animation: slideIn 0.2s ease;
+        }
+
+        .toast.error { background: #be123c; }
+        .toast.success { background: #047857; }
+
+        @keyframes slideIn {
+            from { transform: translateY(12px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 640px) {
+            .spectrum-grid {
+                gap: 2px;
+                padding: 8px 2px;
+            }
+            .vote-token {
+                font-size: 9px;
+                padding: 1px 3px;
+            }
+            .tick-num {
+                width: 20px;
+                height: 20px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 頂部標頭 -->
+    <header>
+        <div class="header-inner">
+            <div class="brand-area">
+                <div class="book-cover-box" id="headerCoverBox">
+                    <img id="headerCoverImg" src="" alt="文本封面" style="display:none;" onerror="this.style.display='none'; document.getElementById('headerCoverEmpty').style.display='block';">
+                    <div id="headerCoverEmpty" class="book-placeholder">📖<br>閱讀文本</div>
+                </div>
+                <div class="title-group">
+                    <div class="subtitle" id="displaySubtitle">六年級深度思辨・Silent Gallery Walk</div>
+                    <h1 id="displayTitle">《鏡之孤城》無聲筆談討論板</h1>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 sm:gap-3">
-<!-- ... existing code ... -->
-            <!-- 無聲筆戰卡片流 (Cards & Nested Replies) -->
-            <section class="space-y-4">
-                <div class="flex flex-wrap items-center justify-between gap-2 px-1">
-                    <h3 class="font-serif font-bold text-slate-800 text-lg flex items-center gap-2">
-                        <i data-lucide="messages-square" class="w-5 h-5 text-indigo-600"></i>
-                        <span>筆尖交鋒區</span>
-                        <span id="postCountBadge" class="text-xs font-sans bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full">0 則論點</span>
-                    </h3>
-                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
-                        <span class="text-slate-500 hidden sm:inline mr-1">篩選交鋒：</span>
-                        <button onclick="setTagFilter('ALL')" id="filterBtn_ALL" class="filter-tag-btn px-2.5 py-1 rounded-lg font-bold bg-slate-800 text-white transition">全部</button>
-                        <button onclick="setTagFilter('+')" id="filterBtn_+" class="filter-tag-btn px-2 py-1 rounded-lg font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition">含 [+ 補充]</button>
-                        <button onclick="setTagFilter('?')" id="filterBtn_?" class="filter-tag-btn px-2 py-1 rounded-lg font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">含 [? 質疑]</button>
-                        <button onclick="setTagFilter('VS')" id="filterBtn_VS" class="filter-tag-btn px-2 py-1 rounded-lg font-bold bg-rose-100 text-rose-800 hover:bg-rose-200 transition">含 [VS 對立]</button>
-                    </div>
+            <div class="header-controls">
+                <div class="status-pill" id="connStatusPill">
+                    <span class="status-dot" id="connStatusDot"></span>
+                    <span id="connStatusText">單機預覽模式</span>
                 </div>
-
-                <!-- 卡片列表容器 -->
-                <div id="postsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                    <!-- 由 JS 動態渲染論點卡片與巢狀回擊 -->
-                </div>
-            </section>
-<!-- ... existing code ... -->
-                    <!-- 即時光譜視覺化數線 (0 ~ 10 刻度與學生圓點堆疊) -->
-                    <div class="pt-4 pb-2">
-                        <div class="flex justify-between text-xs sm:text-sm font-bold mb-3 gap-4">
-                            <div class="text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg max-w-[46%]">
-                                <span class="text-base font-black mr-1">0 分</span>
-                                <span id="rulerLeftLabel">完全不認同：受害者無罪</span>
-                            </div>
-                            <div class="text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg text-right max-w-[46%]">
-                                <span id="rulerRightLabel">高度認同：自己也有責任</span>
-                                <span class="text-base font-black ml-1">10 分</span>
-                            </div>
-                        </div>
-
-                        <!-- 兩極衝突高亮提示橫幅 -->
-                        <div id="polarizationAlert" class="hidden mb-2.5 bg-amber-100/90 border border-amber-300 text-amber-950 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2">
-                            <i data-lucide="flame" class="w-4 h-4 text-rose-600 shrink-0"></i>
-                            <span>偵測到兩極立場交鋒（0~2 分 vs 8~10 分）！建議老師點擊兩端圓點開啟口頭申辯。</span>
-                        </div>
-
-                        <!-- 11 個刻度欄位的視覺化堆疊舞台 -->
-<!-- ... existing code ... -->
-                <!-- 分頁 2：萬用題組編輯器 -->
-                <div id="adminPane_questions" class="space-y-5 hidden">
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 flex items-center justify-between gap-2">
-                        <span>💡 修改完成後，請務必點擊最下方的<strong>「儲存並套用至全班」</strong>，所有學生畫面會立即更新為新書封與題目！</span>
-                        <button onclick="addNewPosterEditor()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg shrink-0">
-                            ＋ 新增海報分頁
-                        </button>
-                    </div>
-
-                    <!-- 書名、副標題與文本封面設定區 -->
-                    <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 space-y-4">
-                        <h3 class="font-serif font-bold text-slate-900 text-base flex items-center gap-2 border-b border-slate-200 pb-2">
-                            <i data-lucide="book-image" class="w-4 h-4 text-indigo-600"></i> 文本基本資訊與書封設定
-                        </h3>
-                        <div class="flex flex-col sm:flex-row gap-4 items-start">
-                            <!-- 即時封面預覽框 -->
-                            <div class="w-24 h-32 rounded-lg overflow-hidden bg-slate-800 border-2 border-slate-300 book-cover-3d shrink-0 flex items-center justify-center mx-auto sm:mx-0">
-                                <img id="adminCoverPreviewImg" src="" alt="封面預覽" class="w-full h-full object-cover hidden">
-                                <div id="adminCoverPreviewEmpty" class="text-center text-slate-400 p-2">
-                                    <i data-lucide="image" class="w-6 h-6 mx-auto mb-1"></i>
-                                    <span class="text-[10px] block">無封面圖片</span>
-                                </div>
-                            </div>
-
-                            <div class="flex-1 w-full space-y-3">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">討論文本書名 / 主標題</label>
-                                        <input type="text" id="editCourseTitle" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-900">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-700 mb-1">副標題 / 班級標示</label>
-                                        <input type="text" id="editCourseSubtitle" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800">
-                                    </div>
-                                </div>
-
-                                <!-- 封面更換：網址輸入 或 上傳本機圖片 -->
-                                <div class="space-y-2 pt-1">
-                                    <label class="block text-xs font-bold text-slate-700">更換文本封面（貼上圖片網址，或直接上傳本機圖片檔）</label>
-                                    <div class="flex flex-col sm:flex-row gap-2">
-                                        <input type="url" id="editCoverUrlInput" oninput="handleCoverUrlInput(this.value)" placeholder="https://... 貼上網路書封圖片連結" class="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800">
-                                        <label class="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shrink-0 transition">
-                                            <i data-lucide="upload" class="w-3.5 h-3.5"></i> 上傳本機圖片
-                                            <input type="file" id="editCoverFileInput" accept="image/*" onchange="handleCoverFileUpload(event)" class="hidden">
-                                        </label>
-                                        <button type="button" onclick="clearEditedCover()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 shrink-0">
-                                            移除封面
-                                        </button>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500">系統會自動將上傳的圖片最佳化壓縮，確保全班平板透過雲端同步秒速載入。</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 動態生成的各海報編輯區塊 -->
-<!-- ... existing code ... -->
-    <!-- ==================== 6. 教師安全登入驗證視窗 (隱藏帳密資訊) ==================== -->
-    <div id="adminLoginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <form onsubmit="submitAdminLogin(event)" class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                        <i data-lucide="shield-check" class="w-5 h-5"></i>
-                    </div>
-                    <h3 class="font-serif font-bold text-lg text-slate-900">教師後台驗證</h3>
-                </div>
-                <button type="button" onclick="closeAdminLoginModal()" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button class="btn btn-user" onclick="openUserModal()">
+                    <span class="color-dot" id="currentUserDot" style="background:#2563eb;"></span>
+                    <span id="currentUserName">設定代號</span>
+                </button>
+                <button class="btn btn-admin" id="adminEntryBtn" onclick="handleAdminClick()">
+                    ⚙️ 教師後台
                 </button>
             </div>
-            <p class="text-xs text-slate-500">請輸入管理員帳號與密碼以進入控場與題組編輯介面。</p>
-            <div class="space-y-3">
-                <div>
-                    <label for="adminAccountInput" class="block text-xs font-bold text-slate-700 mb-1">教師帳號</label>
-                    <input type="text" id="adminAccountInput" autocomplete="off" required class="w-full rounded-xl border border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 px-3.5 py-2 text-sm text-slate-900">
-                </div>
-                <div>
-                    <label for="adminPasswordInput" class="block text-xs font-bold text-slate-700 mb-1">教師密碼</label>
-                    <input type="password" id="adminPasswordInput" autocomplete="current-password" required class="w-full rounded-xl border border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 px-3.5 py-2 text-sm text-slate-900">
-                </div>
-            </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="closeAdminLoginModal()" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">取消</button>
-                <button type="submit" class="px-5 py-2 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-amber-400 shadow">登入後台</button>
-            </div>
-        </form>
+        </div>
+    </header>
+
+    <!-- 凍結討論提示橫幅 -->
+    <div class="frozen-banner" id="frozenBanner">
+        🔒 教師已鎖定目前討論版（現在為靜音閱讀與口頭申辯時間，暫停新增留言與投票）
     </div>
 
-    <!-- ==================== 7. 自訂提示訊息框 (取代 alert/confirm) ==================== -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <!-- 主內容區 -->
+    <main>
+        <!-- 海報分頁切換列 -->
+        <div class="poster-tabs" id="posterTabsBar"></div>
 
-    <div id="customDialogModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
-            <h3 id="dialogTitle" class="font-serif font-bold text-lg text-slate-900">系統提示</h3>
-            <p id="dialogMessage" class="text-sm text-slate-600 leading-relaxed"></p>
-            <div class="flex justify-end gap-2 pt-2">
-                <button id="dialogCancelBtn" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">取消</button>
-                <button id="dialogConfirmBtn" class="px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white">確定</button>
+        <!-- 海報核心問題區 -->
+        <section class="poster-board">
+            <span class="poster-badge">無聲筆談戰場・核心思辨題</span>
+            <h2 class="poster-title" id="activePosterTitle">載入中...</h2>
+            <div class="question-list" id="activePosterQuestions"></div>
+        </section>
+
+        <!-- 發表新觀點區 -->
+        <section class="composer-box">
+            <textarea id="newPostInput" placeholder="寫下你對上述問題的觀察或論點（支持你的看法，可用書中事件舉例）..."></textarea>
+            <div class="composer-footer">
+                <span class="symbol-guide">💡 提示：發表後，請去下方卡片點擊「💬 符號回擊」使用 <b>[+]</b>、<b>[?]</b> 或 <b>[VS]</b> 與同學對話！</span>
+                <button class="btn btn-primary" onclick="submitNewPost()">✏️ 貼上我的觀點卡</button>
+            </div>
+        </section>
+
+        <!-- 筆尖交鋒討論流 -->
+        <section>
+            <div class="stream-header">
+                <div class="stream-title">
+                    <span>🗂️ 筆尖交鋒區</span>
+                    <span style="font-size:12px; background:#e2e8f0; padding:2px 10px; border-radius:999px;" id="postCounter">0 則論點</span>
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">全部留言</button>
+                    <button class="filter-btn" data-filter="+" onclick="setFilter('+')">含 [+ 補充]</button>
+                    <button class="filter-btn" data-filter="?" onclick="setFilter('?')">含 [? 質疑]</button>
+                    <button class="filter-btn" data-filter="VS" onclick="setFilter('VS')">含 [VS 對立]</button>
+                </div>
+            </div>
+
+            <div class="posts-grid" id="postsGrid"></div>
+        </section>
+
+        <!-- 0~10 分立場尺規區 -->
+        <section class="ruler-section">
+            <div class="ruler-header">
+                <h3 style="font-size:1.15rem; font-weight:800;">📏 立場尺規表態（0 ～ 10 分光譜）</h3>
+                <span style="font-size:12px; color:#64748b; font-weight:700;" id="voteCounter">目前 0 人表態</span>
+            </div>
+
+            <div class="ruler-prompt" id="rulerPromptText">立場尺規題目載入中...</div>
+
+            <div class="polarization-alert" id="polarizationAlert">
+                ⚡ 偵測到兩極立場交鋒（同時出現 0～2 分與 8～10 分）！建議老師點擊光譜兩端的學生圓點，邀請雙方進行口頭申辯。
+            </div>
+
+            <div class="ruler-labels">
+                <div class="ruler-label-left">0 分：<span id="rulerLeftText">完全不認同</span></div>
+                <div class="ruler-label-right"><span id="rulerRightText">高度認同</span>：10 分</div>
+            </div>
+
+            <!-- 11 刻度視覺化堆疊圖 -->
+            <div class="spectrum-grid" id="spectrumGrid"></div>
+
+            <!-- 學生投票滑桿表單 -->
+            <div class="vote-form">
+                <div class="slider-row">
+                    <span style="font-size:13px; font-weight:700;">我的分數：</span>
+                    <input type="range" id="voteSlider" min="0" max="10" value="5" oninput="document.getElementById('voteScoreVal').textContent = this.value + ' 分'">
+                    <span class="score-display" id="voteScoreVal">5 分</span>
+                </div>
+                <div class="reason-row">
+                    <input type="text" id="voteReasonInput" maxlength="80" placeholder="用一句話寫下你給這個分數的理由（點擊光譜上的名字可查看理由）...">
+                    <button class="btn btn-primary" onclick="submitVote()">📍 送出立場標記</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 1. 學生匿名代號設定視窗 -->
+    <div class="modal-backdrop" id="userModal">
+        <div class="modal-card">
+            <div class="modal-title">
+                <span>🎭 設定無聲筆談身分</span>
+                <button class="btn btn-secondary" style="padding:4px 10px;" onclick="closeModal('userModal')">✕</button>
+            </div>
+            <p style="font-size:13px; color:#64748b; margin-bottom:14px;">輸入一個匿名代號並選擇代表色，即可進入討論板（無需註冊帳號）。</p>
+            <div class="form-group">
+                <label>你的匿名代號（例如：孤城旅人、3號觀察者）</label>
+                <input type="text" id="nicknameInput" class="form-input" maxlength="12" placeholder="請輸入代號...">
+            </div>
+            <div class="form-group">
+                <label>選擇你的代表色</label>
+                <div class="color-grid" id="colorGrid"></div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                <button class="btn btn-secondary" onclick="closeModal('userModal')">先逛逛</button>
+                <button class="btn btn-primary" onclick="saveUserIdentity()">開始無聲筆談</button>
             </div>
         </div>
     </div>
 
-    <!-- ==================== JAVASCRIPT 核心邏輯 ==================== -->
+    <!-- 2. 教師安全登入視窗 -->
+    <div class="modal-backdrop" id="loginModal">
+        <div class="modal-card" style="max-width:380px;">
+            <div class="modal-title">
+                <span>🔐 教師後台驗證</span>
+                <button class="btn btn-secondary" style="padding:4px 10px;" onclick="closeModal('loginModal')">✕</button>
+            </div>
+            <p style="font-size:13px; color:#64748b; margin-bottom:14px;">請輸入管理員帳號與密碼以開啟題組編輯與控場設定。</p>
+            <form onsubmit="handleAdminLogin(event)">
+                <div class="form-group">
+                    <label>帳號</label>
+                    <input type="text" id="adminUserInp" class="form-input" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label>密碼</label>
+                    <input type="password" id="adminPassInp" class="form-input" autocomplete="off" required>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('loginModal')">取消</button>
+                    <button type="submit" class="btn btn-primary">登入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. 教師後台主控視窗 -->
+    <div class="modal-backdrop" id="adminModal">
+        <div class="modal-card wide">
+            <div class="modal-title">
+                <span>⚙️ 教師中控與萬用題組後台</span>
+                <button class="btn btn-secondary" style="padding:4px 10px;" onclick="closeModal('adminModal')">✕ 關閉</button>
+            </div>
+
+            <div class="admin-tabs">
+                <button class="admin-tab-btn active" onclick="switchAdminTab('editor', this)">📝 萬用題組與封面編輯</button>
+                <button class="admin-tab-btn" onclick="switchAdminTab('firebase', this)">☁️ 全班多人連線 (Firebase)</button>
+                <button class="admin-tab-btn" onclick="switchAdminTab('control', this)">🎛️ 課堂控場與匯出</button>
+            </div>
+
+            <!-- 分頁 A：萬用題組與封面編輯 -->
+            <div id="adminPane_editor">
+                <div class="editor-card">
+                    <h4 style="margin-bottom:10px; font-size:14px;">📖 文本基本資訊與封面設定</h4>
+                    <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start;">
+                        <div class="book-cover-box" style="width:76px; height:104px;">
+                            <img id="adminCoverPreview" src="" style="display:none;">
+                            <div id="adminCoverPreviewEmpty" class="book-placeholder">無封面</div>
+                        </div>
+                        <div style="flex:1; min-width:220px;">
+                            <div class="form-group">
+                                <label>討論文本書名 / 標題</label>
+                                <input type="text" id="editTitleInp" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>副標題 / 年級標示</label>
+                                <input type="text" id="editSubtitleInp" class="form-input">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>更換文本封面（貼上圖片網址，或直接選擇本機圖片）</label>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <input type="text" id="editCoverUrlInp" class="form-input" style="flex:1;" placeholder="https://..." oninput="previewCoverUrl(this.value)">
+                                    <label class="btn btn-secondary" style="cursor:pointer;">
+                                        📁 上傳圖片
+                                        <input type="file" accept="image/*" style="display:none;" onchange="handleCoverUpload(event)">
+                                    </label>
+                                    <button type="button" class="btn btn-secondary" onclick="clearCoverPreview()">清除</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h4 style="font-size:14px;">🗂️ 海報戰場設定（可自由增減與修改）</h4>
+                    <button type="button" class="btn btn-secondary" onclick="addPosterBlock()">＋ 新增海報分頁</button>
+                </div>
+
+                <div id="postersEditorContainer"></div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+                    <button type="button" class="btn btn-primary" onclick="saveEditorConfig()">💾 儲存並套用至全班</button>
+                </div>
+            </div>
+
+            <!-- 分頁 B：Firebase 多人連線設定 -->
+            <div id="adminPane_firebase" style="display:none;">
+                <div class="editor-card">
+                    <h4 style="margin-bottom:8px; font-size:14px;">☁️ 貼上 Firebase 設定碼（開啟全班跨平板即時同步）</h4>
+                    <p style="font-size:12.5px; color:#475569; margin-bottom:10px;">
+                        請從 Firebase 專案設定複製 <code>firebaseConfig</code>（直接貼上整段 <code>const firebaseConfig = { ... };</code> 或大括號 <code>{ ... }</code> 皆可），儲存後全班平板即可秒速同步。
+                    </p>
+                    <textarea id="firebaseConfigInp" class="form-input" style="min-height:140px; font-family:monospace; font-size:12px;" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "...",
+  "databaseURL": "https://....firebaseio.com",
+  "projectId": "..."
+}'></textarea>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:8px;">
+                        <button type="button" class="btn btn-secondary" onclick="disconnectFirebase()">切換回單機模式</button>
+                        <button type="button" class="btn btn-primary" onclick="saveFirebaseConfig()">🔗 儲存並連線資料庫</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分頁 C：課堂控場與匯出 -->
+            <div id="adminPane_control" style="display:none;">
+                <div class="editor-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h4 style="font-size:14px;">🔒 凍結 / 解鎖學生討論</h4>
+                        <p style="font-size:12px; color:#64748b;">時間到準備進行口頭申辯時，可一鍵鎖定畫面禁止繼續打字。</p>
+                    </div>
+                    <button type="button" class="btn btn-admin" id="toggleFreezeBtn" onclick="toggleFreezeState()">切換鎖定狀態</button>
+                </div>
+
+                <div class="editor-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h4 style="font-size:14px;">📥 匯出全班無聲筆談紀錄</h4>
+                        <p style="font-size:12px; color:#64748b;">將所有海報的觀點、符號回擊與立場尺規分數下載為 Markdown 文字檔留存。</p>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="exportDiscussionMarkdown()">下載紀錄 (.md)</button>
+                </div>
+
+                <div class="editor-card" style="border-color:#fecdd3; background:#fff1f2; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h4 style="font-size:14px; color:#9f1239;">🗑️ 清空所有留言與投票</h4>
+                        <p style="font-size:12px; color:#be123c;">換下一班上課或測試完畢時，一鍵清除全班的留言與尺規圓點（題目會保留）。</p>
+                    </div>
+                    <button type="button" class="btn btn-danger" onclick="clearAllDiscussions()">清空討論紀錄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂確認對話框 (不使用原生 confirm/alert) -->
+    <div class="modal-backdrop" id="confirmModal">
+        <div class="modal-card" style="max-width:380px;">
+            <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:8px;" id="confirmTitle">請確認</h3>
+            <p style="font-size:14px; color:#475569; margin-bottom:18px;" id="confirmMsg"></p>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button class="btn btn-secondary" onclick="closeModal('confirmModal')">取消</button>
+                <button class="btn btn-danger" id="confirmOkBtn">確定執行</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <script>
-        // 1. 預設色彩盤與預設《鏡之孤城》萬用題組資料
-        const COLOR_PALETTE = [
-            { name: '靛藍', hex: '#2563EB' },
-            { name: '珊瑚紅', hex: '#E11D48' },
-            { name: '翡翠綠', hex: '#059669' },
-            { name: '琥珀橘', hex: '#D97706' },
-            { name: '紫羅蘭', hex: '#7C3AED' },
-            { name: '青瓷藍', hex: '#0891B2' },
-            { name: '洋紅', hex: '#DB2777' },
-            { name: '深石板', hex: '#475569' }
+        // ==================== 1. 預設資料與色彩設定 ====================
+        const COLORS = [
+            { name: "靛藍", hex: "#2563eb" },
+            { name: "珊瑚紅", hex: "#e11d48" },
+            { name: "翡翠綠", hex: "#059669" },
+            { name: "琥珀橘", hex: "#d97706" },
+            { name: "紫羅蘭", hex: "#7c3aed" },
+            { name: "青瓷藍", hex: "#0891b2" }
         ];
 
-        const DEFAULT_STATE = {
-            isFrozen: false,
-            config: {
-                courseTitle: '《鏡之孤城》六年級無聲筆談',
-                courseSubtitle: 'Silent Gallery Walk 思辨討論板',
-                coverImage: '',
-                posters: [
-// ... existing code ...
-        // 2. 全域狀態變數
-        let appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
-        let activePosterId = 'poster_a';
-        let activeTagFilter = 'ALL';
-        let currentUser = { name: '', color: COLOR_PALETTE[0].hex };
-        let selectedColor = COLOR_PALETTE[0].hex;
-        let isAdminAuthenticated = false;
-        let dbRef = null;
-        let isFirebaseConnected = false;
-        let activeReplyTargetId = null;
-        let activeReplyTag = null;
-        let tempCoverImage = '';
-
-        // 3. 初始化應用程式
-        window.onload = function() {
-            lucide.createIcons();
-            initColorPalette();
-
-            // 載入本機儲存的 Firebase 設定（若有）
-            const savedFbConfig = localStorage.getItem('sgw_firebase_config');
-            if (savedFbConfig) {
-                try {
-                    initFirebase(JSON.parse(savedFbConfig));
-                } catch (e) {
-                    loadLocalState();
+        const DEFAULT_CONFIG = {
+            title: "《鏡之孤城》無聲筆談討論板",
+            subtitle: "六年級深度思辨・Silent Gallery Walk",
+            coverImage: "",
+            posters: [
+                {
+                    id: "poster_1",
+                    title: "海報 A：惡意的誕生與「受害者有罪論」",
+                    questions: [
+                        "1. 既然被欺負的七個人沒有共通的缺點，為什麼真田美織等人要排斥「跟自己不一樣的人」？",
+                        "2. 像東條萌這樣「為了怕被排擠而跟著疏遠別人」，算不算一種惡意？"
+                    ],
+                    rulerPrompt: "你認同「一個人在班上會被大家排擠，通常自己也有一部分責任」這句話嗎？",
+                    leftLabel: "完全不認同（受害者無罪）",
+                    rightLabel: "高度認同（被排擠者也有責任）"
+                },
+                {
+                    id: "poster_2",
+                    title: "海報 B：鏡子與五點門禁的隱喻",
+                    questions: [
+                        "1. 穿過「鏡子」躲進孤城，是單純逃避現實，還是為了與真實的自己對話？",
+                        "2. 為什麼孤城要設定「五點門禁」？如果大門永遠不關，對他們是拯救還是毀滅？"
+                    ],
+                    rulerPrompt: "當在學校遇到極大的痛苦或排擠時，你認為「徹底躲進自己的世界（暫時不去上學）」是正確的做法嗎？",
+                    leftLabel: "完全不正確（應該立刻面對）",
+                    rightLabel: "完全正確（保護心理健康優先）"
                 }
-            } else {
-                loadLocalState();
-            }
-
-            // 檢查學生身分
-            const savedUser = localStorage.getItem('sgw_user');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                updateUserUI();
-            } else {
-                openIdentityModal();
-            }
-
-            renderAll();
+            ]
         };
-// ... existing code ...
-        // ==================== 介面渲染引擎 ====================
-        function renderAll() {
-            // 1. 課程標題、副標題、文本書封與凍結狀態
-            document.getElementById('courseTitleDisplay').textContent = appState.config.courseTitle;
-            document.getElementById('courseSubtitleDisplay').textContent = appState.config.courseSubtitle || 'Silent Gallery Walk 思辨討論板';
-            renderHeaderCover(appState.config.coverImage);
 
-            const lockBadge = document.getElementById('lockBadge');
-// ... existing code ...
-        function renderHeaderCover(coverSrc) {
-            const img = document.getElementById('bookCoverImg');
-            const placeholder = document.getElementById('bookCoverPlaceholder');
-            if (coverSrc && coverSrc.trim() !== '') {
-                img.src = coverSrc;
-                img.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            } else {
-                img.removeAttribute('src');
-                img.classList.add('hidden');
-                placeholder.classList.remove('hidden');
+        const DEMO_POSTS = {
+            "demo_1": {
+                id: "demo_1",
+                posterId: "poster_1",
+                author: "藍色觀察者",
+                color: "#2563eb",
+                text: "我覺得真田美織欺負別人，是因為她需要透過「抓出一個異類」來證明自己在班上是老大，這跟被欺負的人做錯什麼完全無關。",
+                timestamp: 1700000001,
+                replies: {
+                    "r_1": {
+                        tag: "+",
+                        author: "綠葉筆記",
+                        color: "#059669",
+                        text: "同意！就像理音只是轉學過來、風歌只是比較安靜，他們都沒有做壞事卻一樣被排擠。",
+                        timestamp: 1700000002
+                    },
+                    "r_2": {
+                        tag: "?",
+                        author: "琥珀提問人",
+                        color: "#d97706",
+                        text: "那東條萌原本跟小心很好，後來卻不敢講話，你覺得她算不算幫兇？",
+                        timestamp: 1700000003
+                    }
+                }
+            },
+            "demo_2": {
+                id: "demo_2",
+                posterId: "poster_2",
+                author: "紫羅蘭旅人",
+                color: "#7c3aed",
+                text: "五點門禁非常重要！如果孤城 24 小時開放，大家就會永遠逃避現實，最後變成跟社會斷絕的幽靈，狼小姐設門禁其實是在保護他們。",
+                timestamp: 1700000004,
+                replies: {
+                    "r_3": {
+                        tag: "VS",
+                        author: "珊瑚思辨家",
+                        color: "#e11d48",
+                        text: "但如果現實世界（像伊田老師）根本不幫他們，五點一到把他們趕回痛苦裡，這樣門禁不是很殘忍嗎？",
+                        timestamp: 1700000005
+                    }
+                }
+            }
+        };
+
+        const DEMO_VOTES = {
+            "藍色觀察者_poster_1": { posterId: "poster_1", author: "藍色觀察者", color: "#2563eb", score: 1, reason: "排擠是加害者的權力霸凌，不該檢討受害者。" },
+            "琥珀提問人_poster_1": { posterId: "poster_1", author: "琥珀提問人", color: "#d97706", score: 4, reason: "雖然加害者錯最大，但有時溝通誤會也會讓關係變糟。" },
+            "紫羅蘭旅人_poster_2": { posterId: "poster_2", author: "紫羅蘭旅人", color: "#7c3aed", score: 8, reason: "心靈受傷時先躲起來休息才能活下去。" },
+            "珊瑚思辨家_poster_2": { posterId: "poster_2", author: "珊瑚思辨家", color: "#e11d48", score: 2, reason: "躲得越久只會越不敢回學校，問題不會自己消失。" }
+        };
+
+        // ==================== 2. 應用程式狀態 ====================
+        let state = {
+            isFrozen: false,
+            config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
+            posts: JSON.parse(JSON.stringify(DEMO_POSTS)),
+            votes: JSON.parse(JSON.stringify(DEMO_VOTES))
+        };
+
+        let activePosterId = "poster_1";
+        let currentFilter = "ALL";
+        let currentUser = { name: "", color: COLORS[0].hex };
+        let tempPickedColor = COLORS[0].hex;
+        let activeReplyPostId = null;
+        let activeReplyTag = null;
+        let isAdmin = false;
+        let tempCoverBase64 = "";
+        let editablePosters = [];
+
+        // Firebase 相關變數
+        let fbApp = null;
+        let fbDb = null;
+        let isOnline = false;
+
+        // ==================== 3. 初始化與儲存引擎 ====================
+        window.onload = function() {
+            renderColorPicker();
+
+            // 載入本機使用者身分
+            try {
+                const savedUser = localStorage.getItem("sgw_v2_user");
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    updateUserHeaderUI();
+                } else {
+                    openUserModal();
+                }
+            } catch (e) {
+                openUserModal();
+            }
+
+            // 檢查是否有已儲存的 Firebase 設定
+            let hasFb = false;
+            try {
+                const savedFb = localStorage.getItem("sgw_v2_fb_config");
+                if (savedFb) {
+                    const parsed = JSON.parse(savedFb);
+                    hasFb = connectFirebase(parsed, true);
+                }
+            } catch (e) {
+                hasFb = false;
+            }
+
+            if (!hasFb) {
+                loadLocalStorageState();
+                renderAll();
+            }
+        };
+
+        function loadLocalStorageState() {
+            try {
+                const savedState = localStorage.getItem("sgw_v2_local_state");
+                if (savedState) {
+                    const parsed = JSON.parse(savedState);
+                    if (parsed && parsed.config) {
+                        state = parsed;
+                    }
+                }
+            } catch (e) {}
+            if (!state.config.posters || state.config.posters.length === 0) {
+                state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+            }
+            activePosterId = state.config.posters[0].id;
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem("sgw_v2_local_state", JSON.stringify(state));
+            } catch (e) {}
+        }
+
+        // ==================== 4. Firebase 雲端同步 (開放規則相容版) ====================
+        function connectFirebase(configObj, silent) {
+            try {
+                if (typeof firebase === "undefined") {
+                    if (!silent) showToast("Firebase 函式庫未載入，請檢查網路連線", "error");
+                    return false;
+                }
+                if (!configObj || !configObj.apiKey || !configObj.databaseURL) {
+                    if (!silent) showToast("設定碼缺少 apiKey 或 databaseURL！", "error");
+                    return false;
+                }
+
+                if (fbApp) {
+                    fbApp.delete().catch(function() {});
+                }
+
+                fbApp = firebase.initializeApp(configObj, "sgwApp_" + Date.now());
+                fbDb = fbApp.database();
+
+                // 監聽雲端 gallery_walk 節點
+                fbDb.ref("gallery_walk").on("value", function(snapshot) {
+                    isOnline = true;
+                    updateConnectionBadge(true);
+                    const val = snapshot.val();
+                    if (val) {
+                        if (val.config && val.config.posters && val.config.posters.length > 0) {
+                            state.config = val.config;
+                        }
+                        state.isFrozen = Boolean(val.isFrozen);
+                        state.posts = val.posts || {};
+                        state.votes = val.votes || {};
+                    } else {
+                        // 若雲端是全新的空資料庫，自動將目前題組寫入初始化（清空示範留言）
+                        state.posts = {};
+                        state.votes = {};
+                        fbDb.ref("gallery_walk").set({
+                            isFrozen: false,
+                            config: state.config,
+                            posts: {},
+                            votes: {}
+                        });
+                    }
+                    if (!state.config.posters.find(function(p) { return p.id === activePosterId; })) {
+                        activePosterId = state.config.posters[0].id;
+                    }
+                    renderAll();
+                }, function(err) {
+                    isOnline = false;
+                    updateConnectionBadge(false);
+                    if (!silent) showToast("資料庫連線失敗：" + err.message, "error");
+                });
+
+                localStorage.setItem("sgw_v2_fb_config", JSON.stringify(configObj));
+                return true;
+            } catch (err) {
+                if (!silent) showToast("Firebase 設定格式錯誤：" + err.message, "error");
+                return false;
             }
         }
 
-        function handleCoverImgError() {
-            document.getElementById('bookCoverImg').classList.add('hidden');
-            document.getElementById('bookCoverPlaceholder').classList.remove('hidden');
+        function updateConnectionBadge(online) {
+            const dot = document.getElementById("connStatusDot");
+            const text = document.getElementById("connStatusText");
+            if (online) {
+                dot.classList.add("online");
+                text.textContent = "全班即時連線中 (Firebase)";
+            } else {
+                dot.classList.remove("online");
+                text.textContent = "單機預覽模式";
+            }
         }
 
-        function setTagFilter(tag) {
-            activeTagFilter = tag;
-            ['ALL', '+', '?', 'VS'].forEach(t => {
-                const btn = document.getElementById(`filterBtn_${t}`);
-                if (!btn) return;
-                if (t === tag) {
-                    btn.classList.add('ring-2', 'ring-indigo-500', 'scale-105');
-                } else {
-                    btn.classList.remove('ring-2', 'ring-indigo-500', 'scale-105');
-                }
+        // ==================== 5. 畫面渲染引擎 ====================
+        function renderAll() {
+            // 標頭與書封
+            document.getElementById("displayTitle").textContent = state.config.title || "無聲筆談討論板";
+            document.getElementById("displaySubtitle").textContent = state.config.subtitle || "";
+
+            const coverImg = document.getElementById("headerCoverImg");
+            const coverEmpty = document.getElementById("headerCoverEmpty");
+            if (state.config.coverImage && state.config.coverImage.trim() !== "") {
+                coverImg.src = state.config.coverImage;
+                coverImg.style.display = "block";
+                coverEmpty.style.display = "none";
+            } else {
+                coverImg.style.display = "none";
+                coverEmpty.style.display = "block";
+            }
+
+            // 凍結狀態
+            document.getElementById("frozenBanner").style.display = state.isFrozen ? "block" : "none";
+
+            // 海報分頁標籤
+            const tabsBar = document.getElementById("posterTabsBar");
+            tabsBar.innerHTML = "";
+            state.config.posters.forEach(function(poster) {
+                const btn = document.createElement("button");
+                btn.className = "poster-tab" + (poster.id === activePosterId ? " active" : "");
+                btn.textContent = poster.title;
+                btn.onclick = function() {
+                    activePosterId = poster.id;
+                    activeReplyPostId = null;
+                    renderAll();
+                };
+                tabsBar.appendChild(btn);
             });
-            renderPosts(activePosterId);
-            lucide.createIcons();
+
+            // 當前海報題目
+            const currentPoster = state.config.posters.find(function(p) { return p.id === activePosterId; }) || state.config.posters[0];
+            if (!currentPoster) return;
+
+            document.getElementById("activePosterTitle").textContent = currentPoster.title;
+            const qBox = document.getElementById("activePosterQuestions");
+            qBox.innerHTML = "";
+            (currentPoster.questions || []).forEach(function(q) {
+                const div = document.createElement("div");
+                div.className = "question-item";
+                div.textContent = q;
+                qBox.appendChild(div);
+            });
+
+            // 渲染留言卡片
+            renderPostsStream(currentPoster.id);
+
+            // 渲染立場尺規
+            renderRulerSection(currentPoster);
         }
 
-        function switchPosterTab(posterId) {
-            activePosterId = posterId;
-            activeReplyTargetId = null;
-            renderAll();
-        }
+        function renderPostsStream(posterId) {
+            const grid = document.getElementById("postsGrid");
+            let list = Object.values(state.posts || {}).filter(function(p) { return p.posterId === posterId; });
 
-        function renderPosts(posterId) {
-            const container = document.getElementById('postsContainer');
-            let allPosts = Object.values(appState.posts || {}).filter(p => p.posterId === posterId);
-            
-            if (activeTagFilter !== 'ALL') {
-                allPosts = allPosts.filter(p => {
+            if (currentFilter !== "ALL") {
+                list = list.filter(function(p) {
                     const replies = Object.values(p.replies || {});
-                    return replies.some(r => r.tag === activeTagFilter);
+                    return replies.some(function(r) { return r.tag === currentFilter; });
                 });
             }
 
-            // 排序：教師標記為「焦點辯論」的卡片置頂，其餘依時間新到舊
-            allPosts.sort((a, b) => {
-                if (a.isSpotlight && !b.isSpotlight) return -1;
-                if (!a.isSpotlight && b.isSpotlight) return 1;
-                return (b.timestamp || 0) - (a.timestamp || 0);
-            });
+            list.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+            document.getElementById("postCounter").textContent = list.length + " 則論點";
 
-            document.getElementById('postCountBadge').textContent = `${allPosts.length} 則論點`;
-
-            if (allPosts.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full bg-white/70 border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center text-slate-500">
-                        <i data-lucide="pen-tool" class="w-8 h-8 mx-auto mb-2 text-slate-400"></i>
-                        <p class="font-bold text-base">${activeTagFilter === 'ALL' ? '這張海報目前還是一片空白' : '目前沒有符合此符號標籤的交鋒卡片'}</p>
-                        <p class="text-sm mt-1">${activeTagFilter === 'ALL' ? '成為第一個在上方寫下觀點的人吧！' : '可點擊「全部」查看所有討論串'}</p>
-                    </div>
-                `;
+            if (list.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1; background:#ffffff; border:2px dashed #cbd5e1; border-radius:14px; padding:32px; text-align:center; color:#64748b;">' +
+                    '<div style="font-size:28px; margin-bottom:6px;">✒️</div>' +
+                    '<div style="font-weight:700;">' + (currentFilter === "ALL" ? "這張海報目前還沒有留言" : "目前沒有符合此符號篩選的討論串") + '</div>' +
+                    '<div style="font-size:13px; margin-top:4px;">在上方輸入框寫下你的想法，成為第一個開啟筆戰的人！</div>' +
+                    '</div>';
                 return;
             }
-// ... existing code ...
-            const posterVotes = Object.values(appState.votes || {}).filter(v => v.posterId === poster.id);
-            document.getElementById('rulerVoteCount').textContent = `目前 ${posterVotes.length} 人已表態`;
 
-            // 偵測是否出現兩極立場交鋒 (同時存在 0~2 分與 8~10 分)
-            const hasLowPole = posterVotes.some(v => Number(v.score) <= 2);
-            const hasHighPole = posterVotes.some(v => Number(v.score) >= 8);
-            const polAlert = document.getElementById('polarizationAlert');
-            if (hasLowPole && hasHighPole) {
-                polAlert.classList.remove('hidden');
-            } else {
-                polAlert.classList.add('hidden');
-            }
+            grid.innerHTML = "";
+            list.forEach(function(post) {
+                const card = document.createElement("div");
+                card.className = "post-card";
 
-            // 檢查當前使用者是否投過票，預填表單
-// ... existing code ...
-        // ==================== 教師中控後台與萬用編輯器 ====================
-        async function verifyTeacherCredentials(account, password) {
-            const raw = `${account.trim()}:${password}`;
-            if (window.crypto && window.crypto.subtle) {
-                const msgBuffer = new TextEncoder().encode(raw);
-                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                return hashHex === 'e75b528098229e6f63156896c003d00e14353619a8cf5c4ec4107b2efea4162c';
-            }
-            return account.trim() === 'admin' && password === '2803';
+                // 卡片標頭
+                const header = document.createElement("div");
+                header.className = "post-header";
+                header.innerHTML = '<div class="author-chip"><span class="color-dot" style="background:' + escapeHtml(post.color || "#2563eb") + ';"></span><span>' + escapeHtml(post.author) + '</span></div>';
+
+                if (isAdmin) {
+                    const delBtn = document.createElement("button");
+                    delBtn.className = "btn btn-secondary";
+                    delBtn.style.padding = "2px 8px";
+                    delBtn.style.fontSize = "11px";
+                    delBtn.textContent = "刪除";
+                    delBtn.onclick = function() { deletePost(post.id); };
+                    header.appendChild(delBtn);
+                }
+                card.appendChild(header);
+
+                // 論點內文
+                const body = document.createElement("div");
+                body.className = "post-content";
+                body.textContent = post.text;
+                card.appendChild(body);
+
+                // 巢狀回覆列表
+                const replies = Object.values(post.replies || {}).sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                if (replies.length > 0) {
+                    const repList = document.createElement("div");
+                    repList.className = "replies-list";
+                    replies.forEach(function(rep) {
+                        const item = document.createElement("div");
+                        const tagClass = rep.tag === "+" ? "tag-plus" : (rep.tag === "?" ? "tag-question" : "tag-vs");
+                        const tagName = rep.tag === "+" ? "[+ 補充]" : (rep.tag === "?" ? "[? 質疑]" : "[VS 對立]");
+                        item.className = "reply-item " + tagClass;
+                        item.innerHTML = '<div><span class="tag-badge">' + tagName + '</span><span>' + escapeHtml(rep.text) + '</span></div>' +
+                            '<div class="reply-meta"><span class="color-dot" style="width:8px; height:8px; background:' + escapeHtml(rep.color || "#64748b") + ';"></span><span>' + escapeHtml(rep.author) + '</span></div>';
+                        repList.appendChild(item);
+                    });
+                    card.appendChild(repList);
+                }
+
+                // 回擊按鈕或內嵌回擊抽屜
+                if (activeReplyPostId === post.id) {
+                    const drawer = document.createElement("div");
+                    drawer.className = "reply-drawer";
+                    drawer.innerHTML =
+                        '<div style="font-size:12px; font-weight:700; color:#334155;">1. 請先選擇筆戰符號：</div>' +
+                        '<div class="tag-selector">' +
+                            '<button type="button" class="tag-option' + (activeReplyTag === "+" ? " selected" : "") + '" data-tag="+" onclick="selectReplyTag(\'+\')">+ 補充支持</button>' +
+                            '<button type="button" class="tag-option' + (activeReplyTag === "?" ? " selected" : "") + '" data-tag="?" onclick="selectReplyTag(\'?\')">? 提出質疑</button>' +
+                            '<button type="button" class="tag-option' + (activeReplyTag === "VS" ? " selected" : "") + '" data-tag="VS" onclick="selectReplyTag(\'VS\')">VS 對立交鋒</button>' +
+                        '</div>' +
+                        '<input type="text" id="replyInput_' + post.id + '" class="form-input" placeholder="2. 輸入你的回擊內容..." style="font-size:13px;">' +
+                        '<div style="display:flex; justify-content:flex-end; gap:6px;">' +
+                            '<button type="button" class="btn btn-secondary" style="padding:5px 10px; font-size:12px;" onclick="cancelReply()">取消</button>' +
+                            '<button type="button" class="btn btn-primary" style="padding:5px 12px; font-size:12px;" onclick="submitReply(\'' + post.id + '\')">送出回擊</button>' +
+                        '</div>';
+                    card.appendChild(drawer);
+                } else {
+                    const footer = document.createElement("div");
+                    footer.style.display = "flex";
+                    footer.style.justifyContent = "flex-end";
+                    const replyBtn = document.createElement("button");
+                    replyBtn.className = "btn btn-secondary";
+                    replyBtn.style.padding = "5px 11px";
+                    replyBtn.style.fontSize = "12px";
+                    replyBtn.textContent = "💬 符號回擊";
+                    replyBtn.onclick = function() {
+                        if (state.isFrozen && !isAdmin) return showToast("目前討論已鎖定！", "error");
+                        if (!ensureUser()) return;
+                        activeReplyPostId = post.id;
+                        activeReplyTag = null;
+                        renderPostsStream(posterId);
+                    };
+                    footer.appendChild(replyBtn);
+                    card.appendChild(footer);
+                }
+
+                grid.appendChild(card);
+            });
         }
 
-        function handleAdminButtonClick() {
-            if (isAdminAuthenticated) {
+        function renderRulerSection(poster) {
+            document.getElementById("rulerPromptText").textContent = "【表態命題】" + (poster.rulerPrompt || "");
+            document.getElementById("rulerLeftText").textContent = poster.leftLabel || "完全不認同";
+            document.getElementById("rulerRightText").textContent = poster.rightLabel || "高度認同";
+
+            const votes = Object.values(state.votes || {}).filter(function(v) { return v.posterId === poster.id; });
+            document.getElementById("voteCounter").textContent = "目前 " + votes.length + " 人表態";
+
+            // 偵測兩極交鋒 (<=2 與 >=8 同時存在)
+            const hasLow = votes.some(function(v) { return Number(v.score) <= 2; });
+            const hasHigh = votes.some(function(v) { return Number(v.score) >= 8; });
+            document.getElementById("polarizationAlert").style.display = (hasLow && hasHigh) ? "block" : "none";
+
+            // 繪製 0 ~ 10 光譜欄位
+            const grid = document.getElementById("spectrumGrid");
+            grid.innerHTML = "";
+            for (let i = 0; i <= 10; i++) {
+                const col = document.createElement("div");
+                col.className = "spectrum-col";
+
+                const stack = document.createElement("div");
+                stack.className = "dots-stack";
+
+                const colVotes = votes.filter(function(v) { return Number(v.score) === i; });
+                colVotes.forEach(function(v) {
+                    const token = document.createElement("div");
+                    token.className = "vote-token";
+                    token.style.backgroundColor = v.color || "#2563eb";
+                    token.textContent = v.author;
+                    token.title = v.author + " (" + v.score + "分)：" + (v.reason || "未填寫理由");
+                    token.onclick = function() {
+                        showToast("【" + v.author + "・" + v.score + "分】" + (v.reason || "未填寫理由"), "info");
+                    };
+                    stack.appendChild(token);
+                });
+
+                const tick = document.createElement("div");
+                tick.className = "tick-num";
+                tick.textContent = i;
+
+                col.appendChild(stack);
+                col.appendChild(tick);
+                grid.appendChild(col);
+            }
+        }
+
+        // ==================== 6. 學生互動操作 (發文、符號回擊、尺規投票) ====================
+        function setFilter(tag) {
+            currentFilter = tag;
+            document.querySelectorAll(".filter-btn").forEach(function(btn) {
+                btn.classList.toggle("active", btn.getAttribute("data-filter") === tag);
+            });
+            renderPostsStream(activePosterId);
+        }
+
+        function ensureUser() {
+            if (!currentUser.name || currentUser.name.trim() === "") {
+                openUserModal();
+                showToast("請先設定你的匿名代號！", "error");
+                return false;
+            }
+            return true;
+        }
+
+        function submitNewPost() {
+            if (state.isFrozen && !isAdmin) return showToast("教師已鎖定討論，目前無法發文！", "error");
+            if (!ensureUser()) return;
+
+            const input = document.getElementById("newPostInput");
+            const text = input.value.trim();
+            if (!text) return showToast("請先輸入你的觀點內容！", "error");
+
+            const postId = "post_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+            const newPost = {
+                id: postId,
+                posterId: activePosterId,
+                author: currentUser.name,
+                color: currentUser.color,
+                text: text,
+                timestamp: Date.now(),
+                replies: {}
+            };
+
+            input.value = "";
+            if (isOnline && fbDb) {
+                fbDb.ref("gallery_walk/posts/" + postId).set(newPost);
+            } else {
+                state.posts[postId] = newPost;
+                saveToLocalStorage();
+                renderAll();
+            }
+            showToast("觀點卡已貼上！", "success");
+        }
+
+        function selectReplyTag(tag) {
+            activeReplyTag = tag;
+            document.querySelectorAll(".tag-option").forEach(function(btn) {
+                btn.classList.toggle("selected", btn.getAttribute("data-tag") === tag);
+            });
+        }
+
+        function cancelReply() {
+            activeReplyPostId = null;
+            activeReplyTag = null;
+            renderPostsStream(activePosterId);
+        }
+
+        function submitReply(postId) {
+            if (state.isFrozen && !isAdmin) return showToast("教師已鎖定討論！", "error");
+            if (!ensureUser()) return;
+            if (!activeReplyTag) return showToast("請先點選上方的 [+ 補充]、[? 質疑] 或 [VS 對立] 標籤！", "error");
+
+            const inp = document.getElementById("replyInput_" + postId);
+            const text = inp ? inp.value.trim() : "";
+            if (!text) return showToast("請輸入回擊內容！", "error");
+
+            const replyId = "rep_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+            const newReply = {
+                tag: activeReplyTag,
+                author: currentUser.name,
+                color: currentUser.color,
+                text: text,
+                timestamp: Date.now()
+            };
+
+            activeReplyPostId = null;
+            activeReplyTag = null;
+
+            if (isOnline && fbDb) {
+                fbDb.ref("gallery_walk/posts/" + postId + "/replies/" + replyId).set(newReply);
+            } else {
+                if (!state.posts[postId].replies) state.posts[postId].replies = {};
+                state.posts[postId].replies[replyId] = newReply;
+                saveToLocalStorage();
+                renderAll();
+            }
+            showToast("符號回擊已送出！", "success");
+        }
+
+        function submitVote() {
+            if (state.isFrozen && !isAdmin) return showToast("教師已鎖定討論！", "error");
+            if (!ensureUser()) return;
+
+            const score = Number(document.getElementById("voteSlider").value);
+            const reason = document.getElementById("voteReasonInput").value.trim();
+            const safeAuthorKey = currentUser.name.replace(/[.#$\[\]\/]/g, "_");
+            const voteKey = safeAuthorKey + "_" + activePosterId;
+
+            const voteObj = {
+                posterId: activePosterId,
+                author: currentUser.name,
+                color: currentUser.color,
+                score: score,
+                reason: reason || "（未填寫文字理由）",
+                timestamp: Date.now()
+            };
+
+            if (isOnline && fbDb) {
+                fbDb.ref("gallery_walk/votes/" + voteKey).set(voteObj);
+            } else {
+                state.votes[voteKey] = voteObj;
+                saveToLocalStorage();
+                renderAll();
+            }
+            showToast("立場分數（" + score + " 分）已標記在尺規上！", "success");
+        }
+
+        function deletePost(postId) {
+            showConfirm("刪除留言", "確定要刪除這則論點卡片與底下的所有回擊嗎？", function() {
+                if (isOnline && fbDb) {
+                    fbDb.ref("gallery_walk/posts/" + postId).remove();
+                } else {
+                    delete state.posts[postId];
+                    saveToLocalStorage();
+                    renderAll();
+                }
+                showToast("已刪除該則留言", "info");
+            });
+        }
+
+        // ==================== 7. 學生代號設定視窗 ====================
+        function renderColorPicker() {
+            const grid = document.getElementById("colorGrid");
+            grid.innerHTML = "";
+            COLORS.forEach(function(c) {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "color-choice" + (c.hex === tempPickedColor ? " selected" : "");
+                btn.innerHTML = '<span class="color-dot" style="background:' + c.hex + ';"></span><span>' + c.name + '</span>';
+                btn.onclick = function() {
+                    tempPickedColor = c.hex;
+                    renderColorPicker();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function openUserModal() {
+            document.getElementById("nicknameInput").value = currentUser.name || "";
+            tempPickedColor = currentUser.color || COLORS[0].hex;
+            renderColorPicker();
+            document.getElementById("userModal").classList.add("open");
+        }
+
+        function saveUserIdentity() {
+            const name = document.getElementById("nicknameInput").value.trim();
+            if (!name) return showToast("請輸入一個匿名代號！", "error");
+            currentUser = { name: name, color: tempPickedColor };
+            try {
+                localStorage.setItem("sgw_v2_user", JSON.stringify(currentUser));
+            } catch (e) {}
+            updateUserHeaderUI();
+            closeModal("userModal");
+            showToast("歡迎，" + name + "！", "success");
+        }
+
+        function updateUserHeaderUI() {
+            document.getElementById("currentUserName").textContent = currentUser.name || "設定代號";
+            document.getElementById("currentUserDot").style.backgroundColor = currentUser.color || COLORS[0].hex;
+        }
+
+        // ==================== 8. 教師後台與萬用編輯器 ====================
+        // 原生直接比對驗證（確保在所有瀏覽器、HTTPS/本機環境皆 100% 正常登入，不暴露帳密提示）
+        function checkCredentials(user, pass) {
+            return String(user).trim() === "admin" && String(pass) === "2803";
+        }
+
+        function handleAdminClick() {
+            if (isAdmin) {
                 openAdminModal();
             } else {
-                document.getElementById('adminAccountInput').value = '';
-                document.getElementById('adminPasswordInput').value = '';
-                document.getElementById('adminLoginModal').classList.remove('hidden');
-                lucide.createIcons();
-                setTimeout(() => document.getElementById('adminAccountInput').focus(), 50);
+                document.getElementById("adminUserInp").value = "";
+                document.getElementById("adminPassInp").value = "";
+                document.getElementById("loginModal").classList.add("open");
+                setTimeout(function() { document.getElementById("adminUserInp").focus(); }, 60);
             }
         }
 
-        function closeAdminLoginModal() {
-            document.getElementById('adminLoginModal').classList.add('hidden');
-        }
-
-        async function submitAdminLogin(event) {
-            event.preventDefault();
-            const acc = document.getElementById('adminAccountInput').value;
-            const pwd = document.getElementById('adminPasswordInput').value;
-            const isValid = await verifyTeacherCredentials(acc, pwd);
-            if (isValid) {
-                isAdminAuthenticated = true;
-                closeAdminLoginModal();
-                updateAdminBtnUI();
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById("adminUserInp").value;
+            const p = document.getElementById("adminPassInp").value;
+            if (checkCredentials(u, p)) {
+                isAdmin = true;
+                closeModal("loginModal");
+                const btn = document.getElementById("adminEntryBtn");
+                btn.classList.add("authenticated");
+                btn.textContent = "⚙️ 教師控場中";
                 renderAll();
                 openAdminModal();
-                showToast('教師驗證通過，已開啟控場模式！', 'success');
+                showToast("教師身分驗證成功！", "success");
             } else {
-                showToast('帳號或密碼不正確，請重新輸入！', 'error');
-                document.getElementById('adminPasswordInput').value = '';
-                document.getElementById('adminPasswordInput').focus();
+                showToast("帳號或密碼錯誤，請重新輸入！", "error");
+                document.getElementById("adminPassInp").value = "";
             }
         }
 
-        function updateAdminBtnUI() {
-            const btn = document.getElementById('adminToggleBtn');
-            btn.className = 'flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-sm font-bold shadow transition';
-            document.getElementById('adminBtnText').textContent = '教師控場中';
-        }
-// ... existing code ...
-        // 萬用題組編輯器渲染與封面處理
-        let tempEditPosters = [];
-        function renderQuestionsEditor() {
-            document.getElementById('editCourseTitle').value = appState.config.courseTitle;
-            document.getElementById('editCourseSubtitle').value = appState.config.courseSubtitle || 'Silent Gallery Walk 思辨討論板';
-            tempCoverImage = appState.config.coverImage || '';
-            document.getElementById('editCoverUrlInput').value = tempCoverImage.startsWith('data:') ? '' : tempCoverImage;
-            updateAdminCoverPreview(tempCoverImage);
+        function openAdminModal() {
+            // 載入目前設定到編輯器
+            document.getElementById("editTitleInp").value = state.config.title || "";
+            document.getElementById("editSubtitleInp").value = state.config.subtitle || "";
+            tempCoverBase64 = state.config.coverImage || "";
+            document.getElementById("editCoverUrlInp").value = tempCoverBase64.startsWith("data:") ? "" : tempCoverBase64;
+            updateAdminCoverPreview(tempCoverBase64);
 
-            tempEditPosters = JSON.parse(JSON.stringify(appState.config.posters));
-            drawPostersEditorList();
+            editablePosters = JSON.parse(JSON.stringify(state.config.posters || []));
+            renderPostersEditor();
+
+            // 載入已存的 Firebase 設定
+            try {
+                const savedFb = localStorage.getItem("sgw_v2_fb_config");
+                if (savedFb) {
+                    document.getElementById("firebaseConfigInp").value = JSON.stringify(JSON.parse(savedFb), null, 2);
+                }
+            } catch (e) {}
+
+            document.getElementById("toggleFreezeBtn").textContent = state.isFrozen ? "🔓 解除鎖定（恢復發言）" : "🔒 立即鎖定（凍結討論）";
+            document.getElementById("adminModal").classList.add("open");
         }
 
+        function switchAdminTab(tabName, btnEl) {
+            document.querySelectorAll(".admin-tab-btn").forEach(function(b) { b.classList.remove("active"); });
+            btnEl.classList.add("active");
+            document.getElementById("adminPane_editor").style.display = tabName === "editor" ? "block" : "none";
+            document.getElementById("adminPane_firebase").style.display = tabName === "firebase" ? "block" : "none";
+            document.getElementById("adminPane_control").style.display = tabName === "control" ? "block" : "none";
+        }
+
+        // 書封預覽與上傳壓縮
         function updateAdminCoverPreview(src) {
-            const img = document.getElementById('adminCoverPreviewImg');
-            const empty = document.getElementById('adminCoverPreviewEmpty');
-            if (src && src.trim() !== '') {
+            const img = document.getElementById("adminCoverPreview");
+            const empty = document.getElementById("adminCoverPreviewEmpty");
+            if (src && src.trim() !== "") {
                 img.src = src;
-                img.classList.remove('hidden');
-                empty.classList.add('hidden');
+                img.style.display = "block";
+                empty.style.display = "none";
             } else {
-                img.removeAttribute('src');
-                img.classList.add('hidden');
-                empty.classList.remove('hidden');
+                img.style.display = "none";
+                empty.style.display = "block";
             }
         }
 
-        function handleCoverUrlInput(url) {
-            tempCoverImage = url.trim();
-            updateAdminCoverPreview(tempCoverImage);
+        function previewCoverUrl(url) {
+            tempCoverBase64 = url.trim();
+            updateAdminCoverPreview(tempCoverBase64);
         }
 
-        function clearEditedCover() {
-            tempCoverImage = '';
-            document.getElementById('editCoverUrlInput').value = '';
-            document.getElementById('editCoverFileInput').value = '';
-            updateAdminCoverPreview('');
-            showToast('已清除封面預覽（需點擊儲存生效）', 'info');
+        function clearCoverPreview() {
+            tempCoverBase64 = "";
+            document.getElementById("editCoverUrlInp").value = "";
+            updateAdminCoverPreview("");
         }
 
-        function handleCoverFileUpload(event) {
-            const file = event.target.files[0];
+        function handleCoverUpload(e) {
+            const file = e.target.files[0];
             if (!file) return;
-            if (!file.type.startsWith('image/')) {
-                showToast('請選擇圖片格式的檔案！', 'error');
-                return;
-            }
-
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function(ev) {
                 const img = new Image();
                 img.onload = function() {
-                    // 使用 Canvas 自動等比例縮放至最大寬度 240px（適合直立書封且確保雲端秒速同步）
-                    const maxWidth = 240;
-                    const scale = Math.min(1, maxWidth / img.width);
-                    const canvas = document.createElement('canvas');
+                    const maxW = 240;
+                    const scale = Math.min(1, maxW / img.width);
+                    const canvas = document.createElement("canvas");
                     canvas.width = Math.round(img.width * scale);
                     canvas.height = Math.round(img.height * scale);
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    tempCoverImage = canvas.toDataURL('image/jpeg', 0.8);
-                    document.getElementById('editCoverUrlInput').value = '';
-                    updateAdminCoverPreview(tempCoverImage);
-                    showToast('書封圖片已最佳化壓縮完成！', 'success');
+                    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                    tempCoverBase64 = canvas.toDataURL("image/jpeg", 0.8);
+                    document.getElementById("editCoverUrlInp").value = "";
+                    updateAdminCoverPreview(tempCoverBase64);
+                    showToast("封面圖片已壓縮載入（請記得按儲存）", "success");
                 };
-                img.src = e.target.result;
+                img.src = ev.target.result;
             };
             reader.readAsDataURL(file);
         }
 
-        function drawPostersEditorList() {
-// ... existing code ...
-        function saveConfigChanges() {
-            const newTitle = document.getElementById('editCourseTitle').value.trim();
-            const newSubtitle = document.getElementById('editCourseSubtitle').value.trim();
-            if (!newTitle) return showToast('請輸入課程標題！', 'error');
-
-            appState.config.courseTitle = newTitle;
-            appState.config.courseSubtitle = newSubtitle || 'Silent Gallery Walk 思辨討論板';
-            appState.config.coverImage = tempCoverImage;
-            appState.config.posters = tempEditPosters;
-            if (!appState.config.posters.find(p => p.id === activePosterId)) {
-                activePosterId = appState.config.posters[0].id;
-            }
-            persistState();
-            closeAdminModal();
-            showToast('新書封與題組已儲存並套用至全班！', 'success');
+        // 動態海報編輯器
+        function renderPostersEditor() {
+            const box = document.getElementById("postersEditorContainer");
+            box.innerHTML = "";
+            editablePosters.forEach(function(p, idx) {
+                const card = document.createElement("div");
+                card.className = "editor-card";
+                card.innerHTML =
+                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+                        '<strong style="font-size:13px; color:#1e293b;">海報 #' + (idx + 1) + '</strong>' +
+                        (editablePosters.length > 1 ? '<button type="button" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="removePosterBlock(' + idx + ')">刪除此海報</button>' : '') +
+                    '</div>' +
+                    '<div class="form-group"><label>海報分頁標題</label><input type="text" class="form-input" value="' + escapeHtml(p.title) + '" oninput="editablePosters[' + idx + '].title = this.value"></div>' +
+                    '<div class="form-group"><label>核心思辨問題（每行一題）</label><textarea class="form-input" style="min-height:68px;" oninput="editablePosters[' + idx + '].questions = this.value.split(\'\\n\').filter(Boolean)">' + escapeHtml((p.questions || []).join("\n")) + '</textarea></div>' +
+                    '<div class="form-group"><label>底部 0～10 分立場尺規表態題</label><input type="text" class="form-input" value="' + escapeHtml(p.rulerPrompt) + '" oninput="editablePosters[' + idx + '].rulerPrompt = this.value"></div>' +
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+                        '<div class="form-group" style="margin:0;"><label>0 分端立場說明</label><input type="text" class="form-input" value="' + escapeHtml(p.leftLabel) + '" oninput="editablePosters[' + idx + '].leftLabel = this.value"></div>' +
+                        '<div class="form-group" style="margin:0;"><label>10 分端立場說明</label><input type="text" class="form-input" value="' + escapeHtml(p.rightLabel) + '" oninput="editablePosters[' + idx + '].rightLabel = this.value"></div>' +
+                    '</div>';
+                box.appendChild(card);
+            });
         }
-// ... existing code ...
-        function showCustomDialog({ title, message, showCancel = true, onConfirm }) {
-            const modal = document.getElementById('customDialogModal');
-            document.getElementById('dialogTitle').textContent = title;
-            document.getElementById('dialogMessage').textContent = message;
 
-            const cancelBtn = document.getElementById('dialogCancelBtn');
-            cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+        function addPosterBlock() {
+            editablePosters.push({
+                id: "poster_" + Date.now(),
+                title: "海報 " + String.fromCharCode(65 + editablePosters.length) + "：新討論主題",
+                questions: ["1. 請輸入第一個核心思辨問題..."],
+                rulerPrompt: "請輸入 0～10 分立場表態題...",
+                leftLabel: "完全反對",
+                rightLabel: "完全贊成"
+            });
+            renderPostersEditor();
+        }
 
-            const confirmBtn = document.getElementById('dialogConfirmBtn');
-            const cleanup = () => modal.classList.add('hidden');
+        function removePosterBlock(idx) {
+            editablePosters.splice(idx, 1);
+            renderPostersEditor();
+        }
 
-            cancelBtn.onclick = cleanup;
-            confirmBtn.onclick = () => {
-                cleanup();
-                if (onConfirm) onConfirm();
+        function saveEditorConfig() {
+            const title = document.getElementById("editTitleInp").value.trim();
+            if (!title) return showToast("請輸入書名標題！", "error");
+
+            state.config = {
+                title: title,
+                subtitle: document.getElementById("editSubtitleInp").value.trim(),
+                coverImage: tempCoverBase64,
+                posters: editablePosters
             };
 
-            modal.classList.remove('hidden');
+            if (!state.config.posters.find(function(p) { return p.id === activePosterId; })) {
+                activePosterId = state.config.posters[0].id;
+            }
+
+            if (isOnline && fbDb) {
+                fbDb.ref("gallery_walk/config").set(state.config);
+            } else {
+                saveToLocalStorage();
+                renderAll();
+            }
+            closeModal("adminModal");
+            showToast("新題組與書封已儲存並套用！", "success");
+        }
+
+        // 解析使用者貼上的 Firebase 設定文字
+        function saveFirebaseConfig() {
+            const raw = document.getElementById("firebaseConfigInp").value.trim();
+            if (!raw) return showToast("請貼上 Firebase 設定碼！", "error");
+
+            try {
+                // 擷取大括號 { ... } 區段，並將 JS 物件屬性名稱轉為標準 JSON
+                const start = raw.indexOf("{");
+                const end = raw.lastIndexOf("}");
+                if (start === -1 || end === -1) throw new Error("找不到大括號 { }");
+                let objStr = raw.slice(start, end + 1);
+                // 去除單行註解並為未加引號的 key 補上雙引號
+                objStr = objStr.replace(/\/\/.*$/gm, "").replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":').replace(/,\s*}/g, "}");
+                const parsed = JSON.parse(objStr);
+
+                if (connectFirebase(parsed, false)) {
+                    closeModal("adminModal");
+                    showToast("已成功連線至 Firebase 雲端資料庫！", "success");
+                }
+            } catch (err) {
+                showToast("設定碼解析失敗，請確認複製了完整的 { apiKey: ... } 區塊", "error");
+            }
+        }
+
+        function disconnectFirebase() {
+            localStorage.removeItem("sgw_v2_fb_config");
+            if (fbApp) fbApp.delete().catch(function() {});
+            fbApp = null;
+            fbDb = null;
+            isOnline = false;
+            updateConnectionBadge(false);
+            loadLocalStorageState();
+            renderAll();
+            closeModal("adminModal");
+            showToast("已切換回單機預覽模式", "info");
+        }
+
+        function toggleFreezeState() {
+            const nextState = !state.isFrozen;
+            if (isOnline && fbDb) {
+                fbDb.ref("gallery_walk/isFrozen").set(nextState);
+            } else {
+                state.isFrozen = nextState;
+                saveToLocalStorage();
+                renderAll();
+            }
+            document.getElementById("toggleFreezeBtn").textContent = nextState ? "🔓 解除鎖定（恢復發言）" : "🔒 立即鎖定（凍結討論）";
+            showToast(nextState ? "已鎖定全班討論！" : "已解除鎖定，學生可繼續發言！", "info");
+        }
+
+        function clearAllDiscussions() {
+            showConfirm("清空全班討論紀錄", "確定要刪除所有學生的留言卡片與立場尺規分數嗎？（您的題目與封面設定會完整保留）", function() {
+                if (isOnline && fbDb) {
+                    fbDb.ref("gallery_walk/posts").set({});
+                    fbDb.ref("gallery_walk/votes").set({});
+                } else {
+                    state.posts = {};
+                    state.votes = {};
+                    saveToLocalStorage();
+                    renderAll();
+                }
+                closeModal("adminModal");
+                showToast("已清空所有留言與投票紀錄！", "success");
+            });
+        }
+
+        function exportDiscussionMarkdown() {
+            let md = "# " + state.config.title + "\n";
+            md += "> " + state.config.subtitle + " | 匯出時間：" + new Date().toLocaleString() + "\n\n";
+
+            state.config.posters.forEach(function(p) {
+                md += "---\n## " + p.title + "\n";
+                (p.questions || []).forEach(function(q) { md += "- " + q + "\n"; });
+                md += "\n### 🗂️ 筆尖交鋒留言紀錄\n";
+
+                const posts = Object.values(state.posts || {}).filter(function(item) { return item.posterId === p.id; });
+                if (posts.length === 0) {
+                    md += "_（無留言紀錄）_\n";
+                } else {
+                    posts.forEach(function(post) {
+                        md += "- **" + post.author + "**：" + post.text + "\n";
+                        Object.values(post.replies || {}).forEach(function(rep) {
+                            md += "  - `[" + rep.tag + "]` **" + rep.author + "**：" + rep.text + "\n";
+                        });
+                    });
+                }
+
+                md += "\n### 📏 立場尺規表態（" + p.rulerPrompt + "）\n";
+                const votes = Object.values(state.votes || {}).filter(function(v) { return v.posterId === p.id; });
+                if (votes.length === 0) {
+                    md += "_（無投票紀錄）_\n\n";
+                } else {
+                    votes.sort(function(a, b) { return a.score - b.score; }).forEach(function(v) {
+                        md += "- **" + v.score + " 分**（" + v.author + "）：" + v.reason + "\n";
+                    });
+                    md += "\n";
+                }
+            });
+
+            const blob = new Blob([md], { type: "text/markdown;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "無聲筆談紀錄_" + new Date().toISOString().slice(0, 10) + ".md";
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("討論紀錄已下載！", "success");
+        }
+
+        // ==================== 9. 通用視窗與工具函式 ====================
+        function closeModal(id) {
+            document.getElementById(id).classList.remove("open");
+        }
+
+        function showConfirm(title, msg, onOk) {
+            document.getElementById("confirmTitle").textContent = title;
+            document.getElementById("confirmMsg").textContent = msg;
+            const okBtn = document.getElementById("confirmOkBtn");
+            okBtn.onclick = function() {
+                closeModal("confirmModal");
+                if (onOk) onOk();
+            };
+            document.getElementById("confirmModal").classList.add("open");
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById("toastContainer");
+            const el = document.createElement("div");
+            el.className = "toast " + (type || "");
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(function() {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }, 3200);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
         }
     </script>
 </body>
